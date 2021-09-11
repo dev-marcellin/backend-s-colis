@@ -6,10 +6,23 @@ const brancheModel = require('../models/gerantBranche.model')
 const ObjectID = require('mongoose').Types.ObjectId;
 const ticketModel = require('../models/ticket.model');
 
+module.exports.count = async(req,res) =>{
+   try {
+       const {depart, destination} = req.body;
+    const count = await colisModel.find().select().count();
+    const code = genererCode( depart , destination,count);
+    
+    res.status(200).json(code);
+   } catch (error) {
+       console.log(error)
+   }
+
+}
+
 module.exports.register = async (req, res)=>{
 
    
-const {code, description, nombre, poids, valeur, depart, destination, prix, nomExp, telExp, cniExp, nomDest, telDest}= req.body
+const { description, nombre, poids, valeur, depart, destination, prix, nomExp, telExp, cniExp, nomDest, telDest}= req.body
 
  
 

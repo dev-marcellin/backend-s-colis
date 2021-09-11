@@ -2,6 +2,7 @@ const colisModel = require("../models/colis.model");
 const { find } = require("../models/gerantAgence.model");
 const gerantModel = require("../models/gerantAgence.model");
 const brancheModel = require("../models/gerantBranche.model");
+const ISODate = require("isodate");
 
 
 
@@ -67,13 +68,122 @@ module.exports.gainBranche = async (req, res)=>{
         res.status(400).json(error);
     }
 }
-
+//historique de la journé declenché automatiquement
 module.exports.histoBranche = async (req, res) => {
+let date = new Date();
+let mois =date.getMonth();
+let jour = date.getDate()+1;
+//on filtre ici avec le debut du jour et le debut du jour suivant
+let dateDebut = new Date(date.getFullYear(), mois, date.getDate(),1,0);
 
+let dateFin = new Date(date.getFullYear(), (mois+1), jour,1,0)
+
+
+//(date.getFullYear(), mois, date.getDate())
+
+
+  console.log(" jour "+date.getDate() +" mois "+ mois +" annee "+date.getFullYear());
     try {
-        const colis = await colisModel.find({reference: req.params.id}).select().exec()
+        const colis = await colisModel.find({$and: [
+            {reference: req.params.id},
+            {
+                createdAt: { $gte:ISODate(dateDebut),
+                             $lte:ISODate(dateFin)
+                 },
+                            
+            }
+        ]})
+        console.log("automatique");
+        console.log(ISODate(dateDebut));
+       
+        console.log(ISODate(dateFin) );
+       
+        
+
         res.status(200).json(colis)
     } catch (error) {
-        res.status(200).json(error)
+        res.status(400).json(error) 
+    }
+}
+//historique de la branche par filtrage 
+module.exports.historique = async (req, res )=>{
+    let dateDebut =  new Date(req.body.datedebut);
+    let tempo = new Date(req.body.datefin);
+    let dateFin = new Date(tempo.getFullYear(), tempo.getMonth(), tempo.getDate(),1,0);
+    try {
+        
+        const colis = await colisModel.find({$and: [
+            {reference: req.params.id},
+            {
+                createdAt: { $gte:ISODate(dateDebut),
+                             $lte:ISODate(dateFin)}
+            }
+        ]}
+            
+        )
+        console.log(ISODate(dateDebut));
+        console.log(ISODate(dateFin))
+        res.status(200).json(colis);
+
+    } catch (err) {
+        res.status(200).json(err);
+        console.log(err)
+    }
+}
+
+module.exports.historiqueAgence = async (req, res)=>{
+
+    let date = new Date();
+let mois =date.getMonth();
+let jour = date.getDate()+1;
+//on filtre ici avec le debut du jour et le debut du jour suivant
+let dateDebut = new Date(date.getFullYear(), mois, date.getDate(),1,0);
+
+let dateFin = new Date(date.getFullYear(), (mois), jour,1,0)
+
+    try {
+        let som =0;
+        let histo = [];
+        const agence = await gerantModel.findById(req.params.id).select('idBranche');
+       
+        for(let i=0; i<agence.idBranche.length ; i++){
+            const branche = await brancheModel.findById(agence.idBranche[i]).select();
+           /* for(let j=0; j<branche.idColis.length; j++){
+                const colis = await colisModel.find({$and: [
+                    {id: branche.idColis[j]},
+                    {
+                        createdAt: { $gte:ISODate(dateDebut),
+                                     $lte:ISODate(dateFin)
+                         },
+                                    
+                    }
+                ]} )
+                 console.log(colis.prix)
+                som+= colis.prix ;
+            }*/
+
+            const colis = await colisModel.find({$and: [
+                {reference: branche.id},
+                {
+                    createdAt: { $gte:ISODate(dateDebut),
+                                 $lte:ISODate(dateFin)
+                     },
+                                
+                }
+            ]} )
+
+            for(let j=0; j<colis.length; j++){
+                som+= colis[j].prix
+            }
+          
+            histo.push({nom: branche.nomBranche, som, nombre: colis.length});
+            som=0;
+         
+        }
+        console.log(ISODate(dateDebut));
+        console.log(ISODate(dateFin));
+        res.status(200).json(histo);
+    } catch (error) {
+        console.log(error);
     }
 }
